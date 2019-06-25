@@ -2,6 +2,7 @@ package gate
 
 import (
 	"net"
+	"time"
 )
 
 type Agent interface {
@@ -12,4 +13,6 @@ type Agent interface {
 	Destroy()
 	UserData() interface{}
 	SetUserData(data interface{})
+	SetReadDeadline(t time.Time) error
+	SetWriteDeadline(t time.Time) error
 }

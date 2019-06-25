@@ -5,6 +5,7 @@ import (
 	"github.com/name5566/leaf/console"
 	"github.com/name5566/leaf/go"
 	"github.com/name5566/leaf/timer"
+	"github.com/name5566/leaf/log"
 	"time"
 )
 
@@ -46,22 +47,29 @@ func (s *Skeleton) Run(closeSig chan bool) {
 	for {
 		select {
 		case <-closeSig:
+			log.Error("closeSig");
 			s.commandServer.Close()
 			s.server.Close()
 			for !s.g.Idle() || !s.client.Idle() {
+				//log.Error("closeSig 222");
 				s.g.Close()
 				s.client.Close()
 			}
 			return
 		case ri := <-s.client.ChanAsynRet:
+			//log.Error("event 1");
 			s.client.Cb(ri)
 		case ci := <-s.server.ChanCall:
+			//log.Error("event 2");
 			s.server.Exec(ci)
 		case ci := <-s.commandServer.ChanCall:
+			//log.Error("event 3");
 			s.commandServer.Exec(ci)
 		case cb := <-s.g.ChanCb:
+			//log.Error("event 4");
 			s.g.Cb(cb)
 		case t := <-s.dispatcher.ChanTimer:
+			//log.Error("event 5");
 			t.Cb()
 		}
 	}

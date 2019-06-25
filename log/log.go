@@ -7,9 +7,10 @@ import (
 	"os"
 	"path"
 	"strings"
-	"time"
+	//"time"
 )
-
+//是否包含sql
+const Log_Sql = 0
 // levels
 const (
 	debugLevel   = 0
@@ -50,27 +51,43 @@ func New(strLevel string, pathname string, flag int) (*Logger, error) {
 	// logger
 	var baseLogger *log.Logger
 	var baseFile *os.File
-	if pathname != "" {
-		now := time.Now()
 
-		filename := fmt.Sprintf("%d%02d%02d_%02d_%02d_%02d.log",
-			now.Year(),
-			now.Month(),
-			now.Day(),
-			now.Hour(),
-			now.Minute(),
-			now.Second())
+	// old code
+	/*
+		if pathname != "" {
+			now := time.Now()
 
-		file, err := os.Create(path.Join(pathname, filename))
-		if err != nil {
-			return nil, err
+			filename := fmt.Sprintf("%d%02d%02d_%02d_%02d_%02d.log",
+				now.Year(),
+				now.Month(),
+				now.Day(),
+				now.Hour(),
+				now.Minute(),
+				now.Second())
+
+			file, err := os.Create(path.Join(pathname, filename))
+			if err != nil {
+				return nil, err
+			}
+
+			baseLogger = log.New(file, "", flag)
+			baseFile = file
+		} else {
+			baseLogger = log.New(os.Stdout, "", flag)
 		}
+	*/
 
-		baseLogger = log.New(file, "", flag)
-		baseFile = file
-	} else {
-		baseLogger = log.New(os.Stdout, "", flag)
+	// ====== new code
+	baseLogger = log.New(os.Stdout, "", flag)
+	if pathname != "" {
+		baseLogger.SetOutput(&SuperLogger{
+			Filename:   path.Join(pathname, "gamelog.log"),
+			MaxSize:    100, // megabytes
+			MaxBackups: 30,
+			MaxAge:     60, // days
+		})
 	}
+	// ====== end
 
 	// new
 	logger := new(Logger)
@@ -92,6 +109,9 @@ func (logger *Logger) Close() {
 }
 
 func (logger *Logger) doPrintf(level int, printLevel string, format string, a ...interface{}) {
+	if Log_Sql == 0 && strings.Contains(format, "sqlstr"){
+		return
+	}
 	if level < logger.level {
 		return
 	}
@@ -133,19 +153,19 @@ func Export(logger *Logger) {
 }
 
 func Debug(format string, a ...interface{}) {
-	gLogger.doPrintf(debugLevel, printDebugLevel, format, a...)
+	gLogger.doPrintf(debugLevel, printDebugLevel, "\033[33m"+format+"\033[0m", a...)
 }
 
 func Release(format string, a ...interface{}) {
-	gLogger.doPrintf(releaseLevel, printReleaseLevel, format, a...)
+	gLogger.doPrintf(releaseLevel, printReleaseLevel, "\033[36m"+format+"\033[0m", a...)
 }
 
 func Error(format string, a ...interface{}) {
-	gLogger.doPrintf(errorLevel, printErrorLevel, format, a...)
+	gLogger.doPrintf(errorLevel, printErrorLevel, "\033[31m"+format+"\033[0m", a...)
 }
 
 func Fatal(format string, a ...interface{}) {
-	gLogger.doPrintf(fatalLevel, printFatalLevel, format, a...)
+	gLogger.doPrintf(fatalLevel, printFatalLevel, "\033[37m"+format+"\033[0m", a...)
 }
 
 func Close() {

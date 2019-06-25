@@ -145,10 +145,17 @@ func (s *Server) Go(id interface{}, args ...interface{}) {
 		recover()
 	}()
 
+	/*
 	s.ChanCall <- &CallInfo{
 		f:    f,
 		args: args,
 	}
+	*/
+
+	s.Exec(&CallInfo{
+		f:    f,
+		args: args,
+	})
 }
 
 // goroutine safe

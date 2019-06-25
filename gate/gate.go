@@ -6,7 +6,9 @@ import (
 	"github.com/name5566/leaf/network"
 	"net"
 	"reflect"
+	"sync/atomic"
 	"time"
+	//"runtime/debug"
 )
 
 type Gate struct {
@@ -84,28 +86,30 @@ func (gate *Gate) Run(closeSig chan bool) {
 func (gate *Gate) OnDestroy() {}
 
 type agent struct {
-	conn     network.Conn
-	gate     *Gate
-	userData interface{}
+	conn network.Conn
+	gate *Gate
+	//userData interface{}
+	userData atomic.Value
 }
 
 func (a *agent) Run() {
 	for {
 		data, err := a.conn.ReadMsg()
 		if err != nil {
-			log.Debug("read message: %v", err)
+			log.Error("read message: %v", err)
 			break
 		}
 
+		//log.Debug("leaf/gate/gate.go data: %v", data)
 		if a.gate.Processor != nil {
 			msg, err := a.gate.Processor.Unmarshal(data)
 			if err != nil {
-				log.Debug("unmarshal message error: %v", err)
+				log.Error("unmarshal message error: %v", err)
 				break
 			}
 			err = a.gate.Processor.Route(msg, a)
 			if err != nil {
-				log.Debug("route message error: %v", err)
+				log.Error("route message error: %v", err)
 				break
 			}
 		}
@@ -113,6 +117,7 @@ func (a *agent) Run() {
 }
 
 func (a *agent) OnClose() {
+	//log.Error("agent OnClose ipaddr is: %s", a.RemoteAddr())
 	if a.gate.AgentChanRPC != nil {
 		err := a.gate.AgentChanRPC.Call0("CloseAgent", a)
 		if err != nil {
@@ -152,9 +157,19 @@ func (a *agent) Destroy() {
 }
 
 func (a *agent) UserData() interface{} {
-	return a.userData
+	return a.userData.Load()
+	//return a.userData
 }
 
 func (a *agent) SetUserData(data interface{}) {
-	a.userData = data
+	a.userData.Store(data)
+	//a.userData = data
+}
+
+func (a *agent) SetReadDeadline(t time.Time) error {
+	return a.conn.SetReadDeadline(t)
+}
+
+func (a *agent) SetWriteDeadline(t time.Time) error {
+	return a.conn.SetWriteDeadline(t)
 }

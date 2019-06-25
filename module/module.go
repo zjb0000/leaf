@@ -44,6 +44,7 @@ func Init() {
 func Destroy() {
 	for i := len(mods) - 1; i >= 0; i-- {
 		m := mods[i]
+		log.Error("Destroying mod %d, %+v", i, m)
 		m.closeSig <- true
 		m.wg.Wait()
 		destroy(m)

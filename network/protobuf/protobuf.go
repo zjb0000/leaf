@@ -9,6 +9,8 @@ import (
 	"github.com/name5566/leaf/log"
 	"math"
 	"reflect"
+	"strconv"
+	"strings"
 )
 
 // -------------------------
@@ -16,8 +18,9 @@ import (
 // -------------------------
 type Processor struct {
 	littleEndian bool
-	msgInfo      []*MsgInfo
-	msgID        map[reflect.Type]uint16
+	//msgInfo      []*MsgInfo
+	msgInfo map[uint16]*MsgInfo
+	msgID   map[reflect.Type]uint16
 }
 
 type MsgInfo struct {
@@ -37,6 +40,7 @@ type MsgRaw struct {
 func NewProcessor() *Processor {
 	p := new(Processor)
 	p.littleEndian = false
+	p.msgInfo = make(map[uint16]*MsgInfo)
 	p.msgID = make(map[reflect.Type]uint16)
 	return p
 }
@@ -59,11 +63,25 @@ func (p *Processor) Register(msg proto.Message) uint16 {
 		log.Fatal("too many protobuf messages (max = %v)", math.MaxUint16)
 	}
 
+	// 根据规则解析id，格式必须为XXX_Msg66
+	msgStr := fmt.Sprintf("%s", msgType)
+	msgWords := strings.Split(msgStr, "_")
+	lastword := msgWords[len(msgWords)-1]
+	idInt, _ := strconv.ParseInt(lastword[3:], 10, 0)
+	id := uint16(idInt)
+	log.Error("The msgType is %s , and id is %d.", msgType, id)
+
 	i := new(MsgInfo)
 	i.msgType = msgType
+
+	/* 原来用数组不方便，我改成map了
 	p.msgInfo = append(p.msgInfo, i)
 	id := uint16(len(p.msgInfo) - 1)
+	*/
+	p.msgInfo[id] = i // 新增的
+
 	p.msgID[msgType] = id
+
 	return id
 }
 
@@ -91,7 +109,7 @@ func (p *Processor) SetHandler(msg proto.Message, msgHandler MsgHandler) {
 
 // It's dangerous to call the method on routing or marshaling (unmarshaling)
 func (p *Processor) SetRawHandler(id uint16, msgRawHandler MsgHandler) {
-	if id >= uint16(len(p.msgInfo)) {
+	if _, ok := p.msgInfo[id]; !ok {
 		log.Fatal("message id %v not registered", id)
 	}
 
@@ -102,7 +120,7 @@ func (p *Processor) SetRawHandler(id uint16, msgRawHandler MsgHandler) {
 func (p *Processor) Route(msg interface{}, userData interface{}) error {
 	// raw
 	if msgRaw, ok := msg.(MsgRaw); ok {
-		if msgRaw.msgID >= uint16(len(p.msgInfo)) {
+		if _, ok := p.msgInfo[msgRaw.msgID]; !ok {
 			return fmt.Errorf("message id %v not registered", msgRaw.msgID)
 		}
 		i := p.msgInfo[msgRaw.msgID]
@@ -141,7 +159,7 @@ func (p *Processor) Unmarshal(data []byte) (interface{}, error) {
 	} else {
 		id = binary.BigEndian.Uint16(data)
 	}
-	if id >= uint16(len(p.msgInfo)) {
+	if _, ok := p.msgInfo[id]; !ok {
 		return nil, fmt.Errorf("message id %v not registered", id)
 	}
 

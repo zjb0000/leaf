@@ -6,12 +6,13 @@ import (
 	"github.com/name5566/leaf/log"
 	"runtime"
 	"sync"
+	"sync/atomic"
 )
 
 // one Go per goroutine (goroutine not safe)
 type Go struct {
 	ChanCb    chan func()
-	pendingGo int
+	pendingGo int32
 }
 
 type LinearGo struct {
@@ -33,7 +34,9 @@ func New(l int) *Go {
 }
 
 func (g *Go) Go(f func(), cb func()) {
-	g.pendingGo++
+	//g.pendingGo++
+	atomic.AddInt32(&g.pendingGo, 1)
+
 
 	go func() {
 		defer func() {
@@ -55,7 +58,8 @@ func (g *Go) Go(f func(), cb func()) {
 
 func (g *Go) Cb(cb func()) {
 	defer func() {
-		g.pendingGo--
+		//g.pendingGo--
+		atomic.AddInt32(&g.pendingGo, -1)
 		if r := recover(); r != nil {
 			if conf.LenStackBuf > 0 {
 				buf := make([]byte, conf.LenStackBuf)
@@ -73,13 +77,16 @@ func (g *Go) Cb(cb func()) {
 }
 
 func (g *Go) Close() {
-	for g.pendingGo > 0 {
+	//for g.pendingGo > 0 {
+	for atomic.LoadInt32(&g.pendingGo) > 0 {
 		g.Cb(<-g.ChanCb)
 	}
 }
 
 func (g *Go) Idle() bool {
-	return g.pendingGo == 0
+	log.Error("Idle : %d", atomic.LoadInt32(&g.pendingGo))
+	return atomic.LoadInt32(&g.pendingGo) == 0
+	//return g.pendingGo == 0
 }
 
 func (g *Go) NewLinearContext() *LinearContext {
@@ -90,7 +97,8 @@ func (g *Go) NewLinearContext() *LinearContext {
 }
 
 func (c *LinearContext) Go(f func(), cb func()) {
-	c.g.pendingGo++
+	//c.g.pendingGo++
+	atomic.AddInt32(&c.g.pendingGo, 1)
 
 	c.mutexLinearGo.Lock()
 	c.linearGo.PushBack(&LinearGo{f: f, cb: cb})

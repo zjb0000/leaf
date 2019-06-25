@@ -31,7 +31,7 @@ leaf.Run(
 )
 ```
 
-The modules of `game`, `gate` and `login` are registered consecutively. They are required to implement a `Module` interface.
+The modules of `game`, `gate` and `gate` are registered consecutively. They are required to implement a `Module` interface.
 
 ```go
 type Module interface {
@@ -467,15 +467,6 @@ Leaf support below log level:
 Debug < Release < Error < Fatal (In priority level)
 
 For LeafServer, bin/conf/server.json is used to configure log level which will filter out the lower level log information. Fatal level log is sort of different and comes only when the game server exit. Usually it records the information when the game server is failed to start up.
-
-Set LogFlag (LeafServer conf/conf.go) to output the file name and the line number:
-
-```
-LogFlag = log.Lshortfile
-```
-
-LogFlag：[https://golang.org/pkg/log/#pkg-constants](https://golang.org/pkg/log/#pkg-constants)
-
 
 More references are at [leaf/log](https://github.com/name5566/leaf/blob/master/log).
 

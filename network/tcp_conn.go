@@ -4,6 +4,7 @@ import (
 	"github.com/name5566/leaf/log"
 	"net"
 	"sync"
+	"time"
 )
 
 type ConnSet map[net.Conn]struct{}
@@ -73,7 +74,7 @@ func (tcpConn *TCPConn) Close() {
 
 func (tcpConn *TCPConn) doWrite(b []byte) {
 	if len(tcpConn.writeChan) == cap(tcpConn.writeChan) {
-		log.Debug("close conn: channel full")
+		log.Error("close conn: channel full")
 		tcpConn.doDestroy()
 		return
 	}
@@ -110,4 +111,12 @@ func (tcpConn *TCPConn) ReadMsg() ([]byte, error) {
 
 func (tcpConn *TCPConn) WriteMsg(args ...[]byte) error {
 	return tcpConn.msgParser.Write(tcpConn, args...)
+}
+
+func (tcpConn *TCPConn) SetReadDeadline(t time.Time) error {
+	return tcpConn.conn.SetReadDeadline(t)
+}
+
+func (tcpConn *TCPConn) SetWriteDeadline(t time.Time) error {
+	return tcpConn.conn.SetWriteDeadline(t)
 }

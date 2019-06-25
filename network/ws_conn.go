@@ -6,6 +6,7 @@ import (
 	"github.com/name5566/leaf/log"
 	"net"
 	"sync"
+	"time"
 )
 
 type WebsocketConnSet map[*websocket.Conn]struct{}
@@ -135,4 +136,12 @@ func (wsConn *WSConn) WriteMsg(args ...[]byte) error {
 	wsConn.doWrite(msg)
 
 	return nil
+}
+
+func (wsConn *WSConn) SetReadDeadline(t time.Time) error {
+	return wsConn.conn.SetReadDeadline(t)
+}
+
+func (wsConn *WSConn) SetWriteDeadline(t time.Time) error {
+	return wsConn.conn.SetWriteDeadline(t)
 }
